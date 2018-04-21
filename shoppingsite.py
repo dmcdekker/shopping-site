@@ -12,6 +12,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 
 import melons
 
+
 app = Flask(__name__)
 
 # A secret key is needed to use Flask sessioning features
@@ -60,12 +61,14 @@ def show_shopping_cart():
     # TODO: Display the contents of the shopping cart.
 
     # The logic here will be something like:
-    #
+    
     # - get the cart dictionary from the session
-    #       session[melon_items]
+    cart = session.get("cart", {})
 
     # - create a list to hold melon objects and a variable to hold the total
     #   cost of the order
+    cart_melons = []
+    cart_total = 0
     # - loop over the cart dictionary, and for each melon id:
     #    - get the corresponding Melon object
     #    - compute the total cost for that type of melon
@@ -73,11 +76,24 @@ def show_shopping_cart():
     #    - add quantity and total cost as attributes on the Melon object
     #    - add the Melon object to the list created above
     # - pass the total order cost and the list of Melon objects to the template
-    #
+    for melon_id, quantity in cart.iteritems():
+        # get melon object
+        melon = melons.get_by_id(melon_id)
+        # calculate cost for melon and add to overall cost
+        total_cost = quantity * melon.price
+        cart_total += total_cost
+        # Add the quantity and total cost as attributes on the Melon object
+        melon.quantity = quantity
+        melon.total_cost = total_cost
+        # add melon obj to list
+        cart_melons.append(melon) 
+
     # Make sure your function can also handle the case wherein no cart has
     # been added to the session
 
-    return render_template("cart.html")
+    return render_template("cart.html",
+                           cart=cart_melons,
+                           order_total=order_total)
 
 
 @app.route("/add_to_cart/<melon_id>")
@@ -100,7 +116,8 @@ def add_to_cart(melon_id):
     else:
         cart = session['cart'] = {}
 
-    cart[melon_id] = cart.get(melon_id, 0) + 1     
+    cart[melon_id] = cart.get(melon_id, 0) + 1
+    print cart
         
     # - check if the desired melon id is the cart, and if not, put it in
     # - increment the count for that melon id by 1
@@ -130,16 +147,39 @@ def process_login():
     # The logic here should be something like:
     #
     # - get user-provided name and password from request.form
+    email = request.form.get('email')
+    password = request.form.get('password')
     # - use customers.get_by_email() to retrieve corresponding Customer
     #   object (if any)
+    user = customers.get_by_email(email)
     # - if a Customer with that email was found, check the provided password
     #   against the stored one
     # - if they match, store the user's email in the session, flash a success
     #   message and redirect the user to the "/melons" route
     # - if they don't, flash a failure message and redirect back to "/login"
     # - do the same if a Customer with that email doesn't exist
+    if not user:
+        flash("No such email address.")
+        return redirect('/login')
+
+    if user.password != password:
+        flash("Incorrect password.")
+        return redirect("/login")
+
+    session["logged_in_customer_email"] = user.email
+    flash("Logged in.")
+
 
     return "Oops! This needs to be implemented"
+
+
+@app.route("/logout")
+def process_logout():
+    """Log user out."""
+
+    del session["logged_in_customer_email"]
+    flash("Logged out.")
+    return redirect("/melons")    
 
 
 @app.route("/checkout")
