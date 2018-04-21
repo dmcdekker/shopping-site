@@ -95,28 +95,19 @@ def add_to_cart(melon_id):
     # - check if a "cart" exists in the session, and create one (an empty
     #   dictionary keyed to the string "cart")
     #if cart not in session:
-    melon = melons.get_by_id(melon_id)
-
-
-
-    
-    if session.get('cart') is None:
-        session['cart'] = {}    
-    else:
+    if 'cart' in session:
         cart = session['cart']
-        cart[melon_id] = cart.get(melon_id, 0) + 1 
+    else:
+        cart = session['cart'] = {}
 
-    print session
-
-    
-
+    cart[melon_id] = cart.get(melon_id, 0) + 1     
         
     # - check if the desired melon id is the cart, and if not, put it in
     # - increment the count for that melon id by 1
     # - flash a success message
     # - redirect the user to the cart page
-    flash("Congrats!")
-    return render_template("cart.html")
+    flash("successfully added to cart!")
+    return redirect("/cart")
 
 
 @app.route("/login", methods=["GET"])
